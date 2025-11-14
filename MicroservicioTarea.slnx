@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="MicroservicioTarea.Application/MicroservicioTarea.Application.csproj" />
+  <Project Path="MicroservicioTarea.Domain/MicroservicioTarea.Domain.csproj" />
+  <Project Path="MicroservicioTarea.Infrastructure/MicroservicioTarea.Infrastructure.csproj" />
+  <Project Path="MicroservicioTarea/MicroservicioTarea.csproj" />
+</Solution>
