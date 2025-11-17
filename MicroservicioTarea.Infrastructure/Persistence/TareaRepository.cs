@@ -2,12 +2,6 @@
 using MicroservicioTarea.Domain.Entities;
 using MicroservicioTarea.Domain.Interfaces;
 using MicroservicioTarea.Infrastructure.Persistence;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace MicroservicioTarea.Infrastructure.Repository
 {
@@ -24,77 +18,90 @@ namespace MicroservicioTarea.Infrastructure.Repository
         {
             using var conn = _connection.CreateConnection();
 
-            return conn.Query<Tarea>(
-                @"SELECT 
-                    id_tarea AS IdTarea,
-                    titulo,
-                    descripcion,
-                    prioridad,
-                    estado,
-                    fechaRegistro,
-                    ultimaModificacion,
-                    id_proyecto AS IdProyecto,
-                    id_usuario_asignado AS IdUsuarioAsignado,
-                    status
-                  FROM Tareas
-                  WHERE estado = 1
-                  ORDER BY id_tarea DESC");
+            const string sql = @"SELECT 
+                                    id_tarea AS IdTarea,
+                                    titulo,
+                                    descripcion,
+                                    prioridad,
+                                    estado,
+                                    fechaRegistro,
+                                    ultimaModificacion,
+                                    id_proyecto AS IdProyecto,
+                                    id_usuario_asignado AS IdUsuarioAsignado,
+                                    status
+                                FROM Tareas";
+
+            return conn.Query<Tarea>(sql);
         }
 
         public Tarea GetById(int id)
         {
             using var conn = _connection.CreateConnection();
 
-            return conn.QueryFirstOrDefault<Tarea>(
-                @"SELECT 
-                    id_tarea AS IdTarea,
-                    titulo,
-                    descripcion,
-                    prioridad,
-                    estado,
-                    fechaRegistro,
-                    ultimaModificacion,
-                    id_proyecto AS IdProyecto,
-                    id_usuario_asignado AS IdUsuarioAsignado,
-                    status
-                FROM Tareas
-                WHERE id_tarea = @Id;",
-                new { Id = id });
+            const string sql = @"SELECT 
+                                    id_tarea AS IdTarea,
+                                    titulo,
+                                    descripcion,
+                                    prioridad,
+                                    estado,
+                                    fechaRegistro,
+                                    ultimaModificacion,
+                                    id_proyecto AS IdProyecto,
+                                    id_usuario_asignado AS IdUsuarioAsignado,
+                                    status
+                                FROM Tareas
+                                WHERE id_tarea = @Id";
+
+            return conn.QueryFirstOrDefault<Tarea>(sql, new { Id = id });
         }
 
-        public void Add(Tarea entity)
+        public void Add(Tarea t)
         {
             using var conn = _connection.CreateConnection();
 
-            conn.Execute(
-                @"INSERT INTO Tareas (titulo, descripcion, prioridad, id_proyecto, status)
-                  VALUES (@Titulo, @Descripcion, @Prioridad, @IdProyecto, @Status);",
-                entity);
+            const string sql = @"INSERT INTO Tareas
+                                (titulo, descripcion, prioridad, id_proyecto, status, estado)
+                                VALUES (@Titulo, @Descripcion, @Prioridad, @IdProyecto, @Status, @Estado)";
+
+            conn.Execute(sql, t);
         }
 
-        public void Update(Tarea entity)
+        public void Update(Tarea t)
         {
             using var conn = _connection.CreateConnection();
 
-            conn.Execute(
-                @"UPDATE Tareas
-                  SET titulo = @Titulo,
-                      descripcion = @Descripcion,
-                      prioridad = @Prioridad,
-                      id_proyecto = @IdProyecto,
-                      status = @Status
-                  WHERE id_tarea = @IdTarea;",
-                entity);
+            const string sql = @"UPDATE Tareas SET
+                                    titulo = @Titulo,
+                                    descripcion = @Descripcion,
+                                    prioridad = @Prioridad,
+                                    id_proyecto = @IdProyecto,
+                                    status = @Status,
+                                    estado = @Estado
+                                WHERE id_tarea = @IdTarea";
+
+            conn.Execute(sql, t);
         }
 
         public void Delete(int id)
         {
             using var conn = _connection.CreateConnection();
 
-            conn.Execute(
-                @"UPDATE Tareas SET estado = 0 WHERE id_tarea = @Id;",
-                new { Id = id });
+            const string sql = "DELETE FROM Tareas WHERE id_tarea = @Id";
+
+            conn.Execute(sql, new { Id = id });
+        }
+
+        public IEnumerable<Tarea> GetByProyecto(int idProyecto)
+        {
+            using var conn = _connection.CreateConnection();
+
+            return conn.Query<Tarea>(
+                @"SELECT *
+          FROM Tareas
+          WHERE id_proyecto = @IdProyecto
+            AND estado = 1",
+                new { IdProyecto = idProyecto }
+            );
         }
     }
 }
-

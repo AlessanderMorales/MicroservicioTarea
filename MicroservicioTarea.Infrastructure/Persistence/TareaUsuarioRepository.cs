@@ -46,6 +46,17 @@ namespace MicroservicioTarea.Infrastructure.Repository
                     new { IdTarea = idTarea, IdUsuario = idUsuario });
             }
         }
+
+        public IEnumerable<int> GetTareasByUsuario(int idUsuario)
+        {
+            using var conn = _connection.CreateConnection();
+
+            return conn.Query<int>(
+                @"SELECT id_tarea
+          FROM Tarea_Usuario
+          WHERE id_usuario = @IdUsuario AND estado = 1",
+                new { IdUsuario = idUsuario });
+        }
     }
 }
 
