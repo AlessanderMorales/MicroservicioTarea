@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using MicroservicioTarea.Infrastructure.Repository;
 
 namespace MicroservicioTarea.Application.Services
@@ -16,11 +12,10 @@ namespace MicroservicioTarea.Application.Services
             _repo = repo;
         }
 
-        public IEnumerable<dynamic> GetByTareaId(int idTarea)
-            => _repo.GetByTareaId(idTarea);
+        public IEnumerable<dynamic> GetByTareaId(int idTarea) =>
+            _repo.GetByTareaId(idTarea);
 
-        public void AssignUsers(int idTarea, IEnumerable<int> usuarios)
-            => _repo.AssignUsers(idTarea, usuarios);
+        public void AssignUsers(int idTarea, IEnumerable<int> usuarios) =>
+            _repo.AssignUsers(idTarea, usuarios);
     }
 }
-
