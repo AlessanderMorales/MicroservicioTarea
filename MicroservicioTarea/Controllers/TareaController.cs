@@ -109,42 +109,98 @@ namespace MicroservicioTarea.Controllers
                 if (tarea == null)
                     return NotFound(new { error = true, message = "Tarea no encontrada." });
 
-                if (body.ContainsKey("titulo"))
-                    tarea.Titulo = InputValidator.ValidateAndSanitize(body["titulo"]?.ToString(), "Título");
-
-                if (body.ContainsKey("descripcion"))
-                    tarea.Descripcion = InputValidator.SanitizeText(body["descripcion"]?.ToString());
-
-                if (body.ContainsKey("prioridad"))
-                    tarea.Prioridad = InputValidator.ValidatePriority(body["prioridad"]?.ToString());
-
-                if (body.ContainsKey("status"))
-                    tarea.Status = InputValidator.ValidateStatus(body["status"]?.ToString());
-
-                if (body.ContainsKey("estado") && int.TryParse(body["estado"].ToString(), out int e))
-                    tarea.Estado = e;
-
-                if (body.ContainsKey("idProyecto") && int.TryParse(body["idProyecto"].ToString(), out int p))
+                // Validar y actualizar título
+                if (body.ContainsKey("titulo") && body["titulo"] != null)
                 {
-                    if (p <= 0)
-                        return BadRequest(new { error = true, message = "El ID del proyecto debe ser mayor a 0." });
-                    tarea.IdProyecto = p;
+                    var tituloStr = body["titulo"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(tituloStr))
+                    {
+                        tarea.Titulo = InputValidator.ValidateAndSanitize(tituloStr, "Título");
+                    }
                 }
 
-                if (body.ContainsKey("idUsuarioAsignado") && int.TryParse(body["idUsuarioAsignado"].ToString(), out int u))
-                    tarea.IdUsuarioAsignado = u;
+                // Validar y actualizar descripción
+                if (body.ContainsKey("descripcion"))
+                {
+                    var descripcionStr = body["descripcion"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(descripcionStr))
+                    {
+                        tarea.Descripcion = InputValidator.SanitizeText(descripcionStr);
+                    }
+                    else
+                    {
+                        tarea.Descripcion = null; // Permitir descripción vacía
+                    }
+                }
+
+                // Validar y actualizar prioridad
+                if (body.ContainsKey("prioridad") && body["prioridad"] != null)
+                {
+                    var prioridadStr = body["prioridad"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(prioridadStr))
+                    {
+                        tarea.Prioridad = InputValidator.ValidatePriority(prioridadStr);
+                    }
+                }
+
+                // Validar y actualizar status
+                if (body.ContainsKey("status") && body["status"] != null)
+                {
+                    var statusStr = body["status"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(statusStr))
+                    {
+                        tarea.Status = InputValidator.ValidateStatus(statusStr);
+                    }
+                }
+
+                // Validar y actualizar estado
+                if (body.ContainsKey("estado") && body["estado"] != null)
+                {
+                    var estadoStr = body["estado"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(estadoStr) && int.TryParse(estadoStr, out int e))
+                    {
+                        tarea.Estado = e;
+                    }
+                }
+
+                // Validar y actualizar idProyecto
+                if (body.ContainsKey("idProyecto") && body["idProyecto"] != null)
+                {
+                    var proyectoStr = body["idProyecto"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(proyectoStr) && int.TryParse(proyectoStr, out int p))
+                    {
+                        if (p <= 0)
+                            return BadRequest(new { error = true, message = "El ID del proyecto debe ser mayor a 0." });
+                        tarea.IdProyecto = p;
+                    }
+                }
+
+                // Validar y actualizar idUsuarioAsignado
+                if (body.ContainsKey("idUsuarioAsignado") && body["idUsuarioAsignado"] != null)
+                {
+                    var usuarioStr = body["idUsuarioAsignado"]?.ToString();
+                    if (!string.IsNullOrWhiteSpace(usuarioStr) && int.TryParse(usuarioStr, out int u))
+                    {
+                        tarea.IdUsuarioAsignado = u > 0 ? u : (int?)null;
+                    }
+                }
 
                 tarea.UltimaModificacion = DateTime.Now;
 
                 _service.Update(tarea);
-                _logger.LogInformation($"Tarea actualizada: {id}");
+                _logger.LogInformation($"Tarea actualizada: {id} - {tarea.Titulo}");
 
                 return Ok(new { error = false, message = "Tarea actualizada." });
             }
             catch (ArgumentException ex)
             {
-                _logger.LogWarning($"Validación fallida al actualizar tarea: {ex.Message}");
+                _logger.LogWarning($"Validación fallida al actualizar tarea {id}: {ex.Message}");
                 return BadRequest(new { error = true, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error inesperado al actualizar tarea {id}: {ex.Message}");
+                return StatusCode(500, new { error = true, message = "Error interno al actualizar la tarea." });
             }
         }
 
