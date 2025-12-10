@@ -32,16 +32,13 @@ namespace MicroservicioTarea.Infrastructure.Repository
         public void AssignUsers(int idTarea, IEnumerable<int> usuarios)
         {
             using var conn = _connection.CreateConnection();
-            conn.Execute("UPDATE Tarea_Usuario SET estado = 0 WHERE id_tarea = @IdTarea;", new { IdTarea = idTarea });
-
-            foreach (var idUsuario in usuarios)
-            {
-                const string sql = @"
-                    INSERT INTO Tarea_Usuario (id_tarea, id_usuario, estado)
-                    VALUES (@IdTarea, @IdUsuario, 1)
-                    ON DUPLICATE KEY UPDATE estado = 1, fecha_asignacion = NOW();";
-                conn.Execute(sql, new { IdTarea = idTarea, IdUsuario = idUsuario });
-            }
+            
+            // ✅ CORREGIDO: Usar procedimiento almacenado que maneja correctamente listas vacías
+            var usuariosList = usuarios.ToList();
+            var idsString = usuariosList.Any() ? string.Join(",", usuariosList) : string.Empty;
+            
+            const string sql = "CALL sp_asignar_usuarios_a_tarea(@IdTarea, @IdsUsuarios);";
+            conn.Execute(sql, new { IdTarea = idTarea, IdsUsuarios = idsString });
         }
 
         public IEnumerable<int> GetTareasByUsuario(int idUsuario)

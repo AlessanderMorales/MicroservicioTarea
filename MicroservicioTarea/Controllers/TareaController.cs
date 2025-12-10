@@ -1,6 +1,7 @@
 ﻿using MicroservicioTarea.Application.Services;
 using MicroservicioTarea.Domain.Entities;
 using MicroservicioTarea.Domain.Validators;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MicroservicioTarea.Controllers
@@ -13,6 +14,7 @@ namespace MicroservicioTarea.Controllers
 
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize] // ✅ JWT: Todos los endpoints requieren autenticación
     public class TareaController : ControllerBase
     {
         private readonly TareaService _service;
@@ -299,16 +301,26 @@ namespace MicroservicioTarea.Controllers
                 if (id <= 0)
                     return BadRequest(new { error = true, message = "El ID de la tarea debe ser mayor a 0." });
 
-                if (usuariosIds == null || usuariosIds.Count == 0)
-                    return BadRequest(new { error = true, message = "Debe enviar al menos un usuario." });
+                // ✅ CORREGIDO: Permitir lista vacía para desasignar todos los empleados
+                if (usuariosIds == null)
+                    usuariosIds = new List<int>();
 
+                // Validar que los IDs sean válidos (solo si hay elementos)
                 if (usuariosIds.Any(uid => uid <= 0))
                     return BadRequest(new { error = true, message = "Todos los IDs de usuario deben ser mayores a 0." });
 
                 _usuarioService.AssignUsers(id, usuariosIds);
-                _logger.LogInformation($"Usuarios asignados a tarea {id}");
-
-                return Ok(new { error = false, message = "Usuarios asignados correctamente." });
+                
+                if (usuariosIds.Count == 0)
+                {
+                    _logger.LogInformation($"Todos los usuarios desasignados de tarea {id}");
+                    return Ok(new { error = false, message = "Todos los empleados han sido desasignados de la tarea." });
+                }
+                else
+                {
+                    _logger.LogInformation($"Usuarios asignados a tarea {id}: {usuariosIds.Count} empleados");
+                    return Ok(new { error = false, message = "Usuarios asignados correctamente." });
+                }
             }
             catch (ArgumentException ex)
             {
