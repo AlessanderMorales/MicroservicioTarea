@@ -15,7 +15,7 @@ namespace MicroservicioTarea.Application.Services
         public IEnumerable<dynamic> GetByTareaId(int idTarea) =>
             _repo.GetByTareaId(idTarea);
 
-        public void AssignUsers(int idTarea, IEnumerable<int> usuarios) =>
-            _repo.AssignUsers(idTarea, usuarios);
+        public void AssignUsers(int idTarea, IEnumerable<int> usuarios, string tareaTitulo, string usuarioNombre) =>
+            _repo.AssignUsers(idTarea, usuarios, tareaTitulo, usuarioNombre);
     }
 }

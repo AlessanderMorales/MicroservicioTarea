@@ -14,7 +14,7 @@ namespace MicroservicioTarea.Controllers
 
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // ✅ JWT: Todos los endpoints requieren autenticación
+    [Authorize]
     public class TareaController : ControllerBase
     {
         private readonly TareaService _service;
@@ -117,7 +117,6 @@ namespace MicroservicioTarea.Controllers
                 if (tarea == null)
                     return NotFound(new { error = true, message = "Tarea no encontrada." });
 
-                // Validar y actualizar título
                 if (body.ContainsKey("titulo") && body["titulo"] != null)
                 {
                     var tituloStr = body["titulo"]?.ToString();
@@ -127,7 +126,6 @@ namespace MicroservicioTarea.Controllers
                     }
                 }
 
-                // Validar y actualizar descripción
                 if (body.ContainsKey("descripcion"))
                 {
                     var descripcionStr = body["descripcion"]?.ToString();
@@ -137,11 +135,10 @@ namespace MicroservicioTarea.Controllers
                     }
                     else
                     {
-                        tarea.Descripcion = null; // Permitir descripción vacía
+                        tarea.Descripcion = null;
                     }
                 }
 
-                // Validar y actualizar prioridad
                 if (body.ContainsKey("prioridad") && body["prioridad"] != null)
                 {
                     var prioridadStr = body["prioridad"]?.ToString();
@@ -151,7 +148,6 @@ namespace MicroservicioTarea.Controllers
                     }
                 }
 
-                // Validar y actualizar status
                 if (body.ContainsKey("status") && body["status"] != null)
                 {
                     var statusStr = body["status"]?.ToString();
@@ -161,7 +157,6 @@ namespace MicroservicioTarea.Controllers
                     }
                 }
 
-                // Validar y actualizar estado
                 if (body.ContainsKey("estado") && body["estado"] != null)
                 {
                     var estadoStr = body["estado"]?.ToString();
@@ -171,7 +166,6 @@ namespace MicroservicioTarea.Controllers
                     }
                 }
 
-                // Validar y actualizar idProyecto
                 if (body.ContainsKey("idProyecto") && body["idProyecto"] != null)
                 {
                     var proyectoStr = body["idProyecto"]?.ToString();
@@ -183,7 +177,6 @@ namespace MicroservicioTarea.Controllers
                     }
                 }
 
-                // Validar y actualizar idUsuarioAsignado
                 if (body.ContainsKey("idUsuarioAsignado") && body["idUsuarioAsignado"] != null)
                 {
                     var usuarioStr = body["idUsuarioAsignado"]?.ToString();
@@ -245,7 +238,11 @@ namespace MicroservicioTarea.Controllers
                 if (req.UsuariosIds.Any(id => id <= 0))
                     return BadRequest(new { error = true, message = "Todos los IDs de usuario deben ser mayores a 0." });
 
-                _usuarioService.AssignUsers(req.IdTarea, req.UsuariosIds);
+                var tarea = _service.GetById(req.IdTarea);
+                var tareaTitulo = tarea?.Titulo ?? "Sin título";
+                var usuarioNombre = User.Identity?.Name ?? "Sistema";
+
+                _usuarioService.AssignUsers(req.IdTarea, req.UsuariosIds, tareaTitulo, usuarioNombre);
                 _logger.LogInformation($"Usuarios asignados a tarea {req.IdTarea}");
 
                 return Ok(new { error = false, message = "Usuarios asignados." });
@@ -307,38 +304,37 @@ namespace MicroservicioTarea.Controllers
                 if (id <= 0)
                     return BadRequest(new { error = true, message = "El ID de la tarea debe ser mayor a 0." });
 
-                // ✅ CORREGIDO: Permitir lista vacía para desasignar todos los empleados
                 if (usuariosIds == null)
                     usuariosIds = new List<int>();
 
-                // Validar que los IDs sean válidos (solo si hay elementos)
                 if (usuariosIds.Any(uid => uid <= 0))
                     return BadRequest(new { error = true, message = "Todos los IDs de usuario deben ser mayores a 0." });
 
-                _usuarioService.AssignUsers(id, usuariosIds);
-                
-                // ============================================================
-                // ✨ NUEVO: PUBLICAR EVENTO A RABBITMQ
-                // ============================================================
-                try
-                {
-                    var tarea = _service.GetById(id);
-                    
-                    _eventPublisher.PublishTareaAsignada(new MicroservicioTarea.Domain.Events.TareaAsignadaEvent
-                    {
-                        TareaId = id,
-                        EmpleadosIds = usuariosIds,
-                        UsuarioNombre = User.Identity?.Name ?? "Sistema",
-                        TareaTitulo = tarea?.Titulo ?? "Sin título",
-                        FechaEvento = DateTime.UtcNow
-                    });
+                var tarea = _service.GetById(id);
+                var tareaTitulo = tarea?.Titulo ?? "Sin título";
+                var usuarioNombre = User.Identity?.Name ?? "Sistema";
 
-                    _logger.LogInformation($"📤 Evento 'TareaAsignada' publicado para tarea {id} con {usuariosIds.Count} empleados");
-                }
-                catch (Exception exRabbit)
+                _usuarioService.AssignUsers(id, usuariosIds, tareaTitulo, usuarioNombre);
+                
+                if (usuariosIds.Count > 0)
                 {
-                    // Si falla RabbitMQ, no interrumpir la operación principal
-                    _logger.LogWarning($"⚠️ No se pudo publicar evento a RabbitMQ: {exRabbit.Message}");
+                    try
+                    {
+                        _eventPublisher.PublishTareaAsignada(new MicroservicioTarea.Domain.Events.TareaAsignadaEvent
+                        {
+                            TareaId = id,
+                            EmpleadosIds = usuariosIds,
+                            UsuarioNombre = usuarioNombre,
+                            TareaTitulo = tareaTitulo,
+                            FechaEvento = DateTime.UtcNow
+                        });
+
+                        _logger.LogInformation($"📤 Evento 'TareaAsignada' publicado para tarea {id} con {usuariosIds.Count} empleados");
+                    }
+                    catch (Exception exRabbit)
+                    {
+                        _logger.LogWarning($"⚠️ No se pudo publicar evento a RabbitMQ: {exRabbit.Message}");
+                    }
                 }
                 
                 if (usuariosIds.Count == 0)

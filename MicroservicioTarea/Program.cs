@@ -71,16 +71,17 @@ builder.Services.AddSingleton<MySqlConnectionSingleton>();
 
 builder.Services.AddScoped<IRepository<Tarea>, TareaRepository>();
 builder.Services.AddScoped<TareaUsuarioRepository>();
+builder.Services.AddScoped<OutboxRepository>();
 
 
 builder.Services.AddScoped<TareaService>();
 builder.Services.AddScoped<TareaUsuarioService>();
 
-// ============================================================
-// RABBITMQ: Publicador de Eventos
-// ============================================================
 builder.Services.AddSingleton<MicroservicioTarea.Application.Messaging.IEventPublisher, 
                                 MicroservicioTarea.Application.Messaging.RabbitMQPublisher>();
+
+
+builder.Services.AddHostedService<MicroservicioTarea.BackgroundServices.OutboxProcessor>();
 
 var app = builder.Build();
 
