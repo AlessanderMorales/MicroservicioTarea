@@ -20,12 +20,18 @@ namespace MicroservicioTarea.Controllers
         private readonly TareaService _service;
         private readonly TareaUsuarioService _usuarioService;
         private readonly ILogger<TareaController> _logger;
+        private readonly MicroservicioTarea.Application.Messaging.IEventPublisher _eventPublisher;
 
-        public TareaController(TareaService service, TareaUsuarioService usuarioService, ILogger<TareaController> logger)
+        public TareaController(
+            TareaService service, 
+            TareaUsuarioService usuarioService, 
+            ILogger<TareaController> logger,
+            MicroservicioTarea.Application.Messaging.IEventPublisher eventPublisher)
         {
             _service = service;
             _usuarioService = usuarioService;
             _logger = logger;
+            _eventPublisher = eventPublisher;
         }
 
         [HttpGet]
@@ -310,6 +316,30 @@ namespace MicroservicioTarea.Controllers
                     return BadRequest(new { error = true, message = "Todos los IDs de usuario deben ser mayores a 0." });
 
                 _usuarioService.AssignUsers(id, usuariosIds);
+                
+                // ============================================================
+                // ✨ NUEVO: PUBLICAR EVENTO A RABBITMQ
+                // ============================================================
+                try
+                {
+                    var tarea = _service.GetById(id);
+                    
+                    _eventPublisher.PublishTareaAsignada(new MicroservicioTarea.Domain.Events.TareaAsignadaEvent
+                    {
+                        TareaId = id,
+                        EmpleadosIds = usuariosIds,
+                        UsuarioNombre = User.Identity?.Name ?? "Sistema",
+                        TareaTitulo = tarea?.Titulo ?? "Sin título",
+                        FechaEvento = DateTime.UtcNow
+                    });
+
+                    _logger.LogInformation($"📤 Evento 'TareaAsignada' publicado para tarea {id} con {usuariosIds.Count} empleados");
+                }
+                catch (Exception exRabbit)
+                {
+                    // Si falla RabbitMQ, no interrumpir la operación principal
+                    _logger.LogWarning($"⚠️ No se pudo publicar evento a RabbitMQ: {exRabbit.Message}");
+                }
                 
                 if (usuariosIds.Count == 0)
                 {

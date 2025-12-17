@@ -76,6 +76,12 @@ builder.Services.AddScoped<TareaUsuarioRepository>();
 builder.Services.AddScoped<TareaService>();
 builder.Services.AddScoped<TareaUsuarioService>();
 
+// ============================================================
+// RABBITMQ: Publicador de Eventos
+// ============================================================
+builder.Services.AddSingleton<MicroservicioTarea.Application.Messaging.IEventPublisher, 
+                                MicroservicioTarea.Application.Messaging.RabbitMQPublisher>();
+
 var app = builder.Build();
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
